@@ -1,8 +1,13 @@
+use std::borrow::Borrow;
+
 use leptos::leptos_dom::ev::SubmitEvent;
 use leptos::*;
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::to_value;
 use wasm_bindgen::prelude::*;
+
+use chrono::Utc;
+use chrono_tz::{TZ_VARIANTS, Tz};
 
 #[wasm_bindgen]
 extern "C" {
@@ -13,6 +18,32 @@ extern "C" {
 #[derive(Serialize, Deserialize)]
 struct GreetArgs<'a> {
     name: &'a str,
+}
+
+#[component]
+pub fn SelectOption(is: & 'static Tz, selected_tz: ReadSignal<Option<Tz>>) -> impl IntoView {
+    view! {
+        <option
+            value=is.to_string()
+            selected=move || selected_tz.get().map(|x| x == *is).unwrap_or(false)
+        >
+            {is.to_string()}
+        </option>
+    }
+}
+
+#[component]
+pub fn TimeComp(selected_tz: ReadSignal<Option<Tz>>) -> impl IntoView {
+    view! {
+        <>
+            { move || selected_tz.get()
+                .map(|tz|
+                    view! {
+                        <span>{Utc::now().with_timezone(tz.borrow()).to_string()}</span>
+                }).collect_view()
+            }
+        </>
+    }
 }
 
 #[component]
@@ -39,6 +70,8 @@ pub fn App() -> impl IntoView {
             set_greet_msg.set(new_msg);
         });
     };
+
+    let (selected_tz, set_tz) = create_signal(None::<Tz>);
 
     view! {
         <main class="container">
@@ -72,6 +105,24 @@ pub fn App() -> impl IntoView {
             </form>
 
             <p><b>{ move || greet_msg.get() }</b></p>
+
+            <select on:change=move |ev| {
+                let new_value = event_target_value(&ev);
+                let tz: Option<Tz> = new_value.parse().ok();
+                leptos::logging::log!("new_value: {}", new_value);
+                leptos::logging::log!("tz: {}", tz.map(|x| x.to_string()).unwrap_or("IDK".to_string()));
+                set_tz.set(tz);
+            }>
+                {
+                    TZ_VARIANTS.iter().map(|x| {
+                        view! {
+                            <SelectOption selected_tz is={x} />
+                        }
+                    }).collect_view()
+                }
+            </select>
+            <span>{move || selected_tz.get().map(move |x| x.to_string()).unwrap_or("a".to_string())}</span>
+            <TimeComp selected_tz />
         </main>
     }
 }
