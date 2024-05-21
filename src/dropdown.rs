@@ -1,24 +1,26 @@
 use leptos::*;
 
-use chrono_tz::{TZ_VARIANTS, Tz};
+use chrono_tz::Tz;
 
 #[component]
-fn SelectOption(is: & 'static Tz, selected_tz: ReadSignal<Option<Tz>>) -> impl IntoView {
-    view! {
+fn SelectOption(is: String, selected_item: ReadSignal<Option<String>>) -> impl IntoView {
+    let tz_str: String = is.to_string();
+    view! { move ||
         <option
             value=is.to_string()
-            selected=move || selected_tz.get().map(|x| x == *is).unwrap_or(false)
+            selected=selected_item.get().map(|x| &*x == &*tz_str).unwrap_or(false)
         >
-            {is.to_string()}
+            {tz_str}
         </option>
     }
 }
 
 #[component]
-pub fn TZDropdown<F>(
-    selected_tz: ReadSignal<Option<Tz>>,
+pub fn FilterableDropdown<F>(
+    items: Vec<String>,
+    selected_item: ReadSignal<Option<String>>,
     on_click: F,
-) -> impl IntoView where F: Fn(Option<Tz>) -> () + 'static {
+) -> impl IntoView where F: Fn(Option<String>) -> () + 'static {
     let (search_term, set_search_term) = create_signal(String::new());
 
     let update_search_term = move |ev| {
@@ -30,7 +32,7 @@ pub fn TZDropdown<F>(
     let on_select_change = move |ev| {
         let new_value = event_target_value(&ev);
         let tz: Option<Tz> = new_value.parse().ok();
-        on_click(tz);
+        on_click(tz.map(|x| x.to_string()));
     };
 
     view! {
@@ -40,20 +42,27 @@ pub fn TZDropdown<F>(
                 on:input=update_search_term
             />
             <select on:change=on_select_change>
-                { move || 
-                    TZ_VARIANTS
+                { move ||
+                    if selected_item.get().map(|x| x.contains(&search_term.get())).unwrap_or(false) {
+                        None
+                    } else {
+                        Some( view! {<SelectOption selected_item is={"".to_string()} />} )
+                    }
+                }
+                { move ||
+                    items
                         .iter()
-                        .filter(|x| {
+                        .filter(|tz_str| {
                             let search_term_str: String = search_term.get().to_lowercase();
                             if search_term_str.len() == 0 {
                                 return true
                             }
-                            let tz_str = format!("{}", x);
+                            // let tz_str = format!("{}", x);
                             tz_str.to_lowercase().contains(&*search_term_str)
                         })
                         .map(|x| {
                             view! {
-                                <SelectOption selected_tz is={x} />
+                                <SelectOption selected_item is={x.to_string()} />
                             }
                         })
                         .collect_view()

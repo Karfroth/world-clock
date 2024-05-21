@@ -7,7 +7,7 @@ use serde_wasm_bindgen::to_value;
 use wasm_bindgen::prelude::*;
 
 use chrono::Utc;
-use chrono_tz::Tz;
+use chrono_tz::{TZ_VARIANTS, Tz};
 
 use crate::dropdown::*;
 
@@ -23,11 +23,12 @@ struct GreetArgs<'a> {
 }
 
 #[component]
-pub fn TimeComp(selected_tz: ReadSignal<Option<Tz>>) -> impl IntoView {
+pub fn TimeComp(selected_tz: ReadSignal<Option<String>>) -> impl IntoView {
     move || {
+        let tz_opt: Option<Tz> = selected_tz.get().and_then(|x| x.parse::<Tz>().ok());
         view! {
             <>
-                { selected_tz.get()
+                { tz_opt
                     .map(|tz|
                         view! {
                             <span>{Utc::now().with_timezone(tz.borrow()).to_string()}</span>
@@ -63,11 +64,16 @@ pub fn App() -> impl IntoView {
         });
     };
 
-    let (selected_tz, set_tz) = create_signal(None::<Tz>);
+    let (selected_tz, set_tz) = create_signal(None::<String>);
 
     let on_tz_select = move |tz| {
         set_tz.set(tz);
     };
+
+    let tzs = TZ_VARIANTS
+        .iter()
+        .map(|x| format!("{}", x))
+        .collect::<Vec<String>>();
 
     view! {
         <main class="container">
@@ -102,9 +108,9 @@ pub fn App() -> impl IntoView {
 
             <p><b>{ move || greet_msg.get() }</b></p>
 
-            <span>{move || selected_tz.get().map(move |x| x.to_string()).unwrap_or("a".to_string())}</span>
+            <span>{move || selected_tz.get().unwrap_or("a".to_string())}</span>
             <TimeComp selected_tz />
-            <TZDropdown on_click=on_tz_select selected_tz />
+            <FilterableDropdown items=tzs on_click=on_tz_select selected_item=selected_tz />
         </main>
     }
 }
