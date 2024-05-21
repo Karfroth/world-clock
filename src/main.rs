@@ -1,4 +1,5 @@
 mod app;
+mod dropdown;
 
 use app::*;
 use leptos::*;
