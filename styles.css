@@ -110,3 +110,23 @@ button {
     background-color: #0f0f0f69;
   }
 }
+
+.wrapper {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  grid-template-rows: repeat(2, 1fr);
+  width: 100wh;
+  height: 100vh;
+}
+
+.time-cell {
+  display: flex;
+  flex-direction: column;
+}
+.time-span {
+  height: 10vh;
+}
+.time-selector {
+  margin-top: 5vh;
+}

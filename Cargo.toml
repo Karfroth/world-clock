@@ -14,6 +14,7 @@ serde-wasm-bindgen = "0.6"
 console_error_panic_hook = "0.1.7"
 chrono-tz = "0.9.0"
 chrono = "0.4.38"
+iana-time-zone = "0.1.60"
 
 [workspace]
 members = ["src-tauri"]

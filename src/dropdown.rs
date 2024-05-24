@@ -36,11 +36,8 @@ pub fn FilterableDropdown<F>(
     };
 
     view! {
-        <>
-            <input
-                id="asdf"
-                on:input=update_search_term
-            />
+        <div class="time-selector">
+            <input on:input=update_search_term />
             <select on:change=on_select_change>
                 { move ||
                     if selected_item.get().map(|x| x.contains(&search_term.get())).unwrap_or(false) {
@@ -68,6 +65,6 @@ pub fn FilterableDropdown<F>(
                         .collect_view()
                 }
             </select>
-        </>
+        </div>
     }
 }
