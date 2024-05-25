@@ -1,12 +1,11 @@
 use std::borrow::Borrow;
 
-use leptos::leptos_dom::ev::SubmitEvent;
 use leptos::*;
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::to_value;
 use wasm_bindgen::prelude::*;
 
-use chrono::{TimeZone, Utc};
+use chrono::Utc;
 use chrono_tz::{TZ_VARIANTS, Tz};
 
 use crate::dropdown::*;
@@ -40,6 +39,37 @@ pub fn TimeComp(selected_tz: ReadSignal<Option<String>>) -> impl IntoView {
 }
 
 #[component]
+fn CellEdit<F: Fn(Option<String>) + 'static>(
+    on_select: F,
+    selected_tz: ReadSignal<Option<String>>) -> impl IntoView {
+    let tzs = TZ_VARIANTS
+        .iter()
+        .map(|x| format!("{}", x))
+        .collect::<Vec<String>>();
+
+    let (editable, set_editable) = create_signal(false);
+
+    let toggle_editable = move |_ev| {
+        set_editable.set(!editable.get());
+    };
+
+    let button_text = move || {
+        if editable.get() {
+            "Confirm"
+        } else {
+            "Edit"
+        }
+    };
+
+    view! {
+        <div>
+            <button on:click=toggle_editable>{button_text}</button>
+            <FilterableDropdown editable items=tzs on_click=on_select selected_item=selected_tz/>
+        </div>
+    }
+}
+
+#[component]
 fn Cell() -> impl IntoView {
     let tz_str = iana_time_zone::get_timezone().ok();
     let (selected_tz, set_tz) = create_signal(tz_str);
@@ -47,17 +77,13 @@ fn Cell() -> impl IntoView {
         set_tz.set(tz);
     };
 
-    let tzs = TZ_VARIANTS
-        .iter()
-        .map(|x| format!("{}", x))
-        .collect::<Vec<String>>();
     view! {
         <div class="time-cell">
             <div class="time-span">
                 <span>{move || selected_tz.get().unwrap_or("a".to_string())}</span>
                 <TimeComp selected_tz />
             </div>
-            <FilterableDropdown items=tzs on_click=on_tz_select selected_item=selected_tz />
+            <CellEdit on_select=on_tz_select selected_tz />
         </div>
     }
 }

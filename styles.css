@@ -68,6 +68,7 @@ button {
   background-color: #ffffff;
   transition: border-color 0.25s;
   box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
+  width: 100px;
 }
 
 button {
@@ -128,5 +129,11 @@ button {
   height: 10vh;
 }
 .time-selector {
+  display: flex;
+  flex-direction: column;
   margin-top: 5vh;
+  justify-content: center;
+}
+.time-selector-hidden {
+  display: none;
 }

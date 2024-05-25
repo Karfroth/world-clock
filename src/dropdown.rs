@@ -17,9 +17,10 @@ fn SelectOption(is: String, selected_item: ReadSignal<Option<String>>) -> impl I
 
 #[component]
 pub fn FilterableDropdown<F>(
+    editable: ReadSignal<bool>,
     items: Vec<String>,
     selected_item: ReadSignal<Option<String>>,
-    on_click: F,
+    on_click: F
 ) -> impl IntoView where F: Fn(Option<String>) -> () + 'static {
     let (search_term, set_search_term) = create_signal(String::new());
 
@@ -35,9 +36,17 @@ pub fn FilterableDropdown<F>(
         on_click(tz.map(|x| x.to_string()));
     };
 
+    let container_class = move || if editable.get() {
+        "time-selector"
+    } else {
+        "time-selector-hidden"
+    };
+
     view! {
-        <div class="time-selector">
-            <input on:input=update_search_term />
+        <div class={container_class}>
+            <div>
+                <input on:input=update_search_term />
+            </div>
             <select on:change=on_select_change>
                 { move ||
                     if selected_item.get().map(|x| x.contains(&search_term.get())).unwrap_or(false) {
