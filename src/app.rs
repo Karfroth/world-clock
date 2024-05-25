@@ -1,3 +1,4 @@
+use core::time;
 use std::borrow::Borrow;
 
 use leptos::*;
@@ -23,16 +24,19 @@ struct GreetArgs<'a> {
 
 #[component]
 pub fn TimeComp(selected_tz: ReadSignal<Option<String>>) -> impl IntoView {
+    let get_time = move || {
+        selected_tz.get().and_then(|x| x.parse::<Tz>().ok()).map(|tz|
+            Utc::now().with_timezone(tz.borrow()).to_string()
+        )
+    };
+    let (time, set_time) = create_signal(get_time().unwrap_or("".to_string()));
+    set_interval(move || {
+        set_time.set(get_time().unwrap_or("".to_string()))
+    }, time::Duration::new(1, 0));
     move || {
-        let tz_opt: Option<Tz> = selected_tz.get().and_then(|x| x.parse::<Tz>().ok());
         view! {
             <div>
-                { tz_opt
-                    .map(|tz|
-                        view! {
-                            <span>{Utc::now().with_timezone(tz.borrow()).to_string()}</span>
-                    })
-                }
+                <span>{time.get()}</span>
             </div>
         }
     }
