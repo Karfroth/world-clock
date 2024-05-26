@@ -3,7 +3,6 @@ use std::borrow::Borrow;
 
 use leptos::*;
 use serde::{Deserialize, Serialize};
-use serde_wasm_bindgen::to_value;
 use wasm_bindgen::prelude::*;
 
 use chrono::Utc;
@@ -18,8 +17,8 @@ extern "C" {
 }
 
 #[derive(Serialize, Deserialize)]
-struct GreetArgs<'a> {
-    name: &'a str,
+struct GetTZArgs {
+    idx: i32,
 }
 
 #[component]
@@ -74,8 +73,8 @@ fn CellEdit<F: Fn(Option<String>) + 'static>(
 }
 
 #[component]
-fn Cell() -> impl IntoView {
-    let tz_str = iana_time_zone::get_timezone().ok();
+fn Cell(initial_tz: Option<String>) -> impl IntoView {
+    let tz_str = if initial_tz.is_some() { initial_tz } else { iana_time_zone::get_timezone().ok() };
     let (selected_tz, set_tz) = create_signal(tz_str);
     let on_tz_select = move |tz| {
         set_tz.set(tz);
@@ -94,14 +93,30 @@ fn Cell() -> impl IntoView {
 
 #[component]
 pub fn App() -> impl IntoView {
+    let (initial_tzs, set_initial_tzs) = create_signal(None::<Vec<String>>);
+
+    spawn_local(async move {
+        // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
+        let new_msg = invoke("get_tzs", JsValue::undefined()).await;
+        let returned = serde_wasm_bindgen::from_value::<Vec<String>>(new_msg).ok();
+
+        set_initial_tzs.set(returned);
+    });
+
+    let get_tz = move |idx: usize| {
+        initial_tzs.get().and_then(|x| x.get(idx).map(|x| x.clone()))
+    };
+
     view! {
         <main class="container">
-            <div class="wrapper">
-                <Cell />
-                <Cell />
-                <Cell />
-                <Cell />
-            </div>
+            <Show when = move || initial_tzs.get().is_some()>
+                <div class="wrapper">
+                    <Cell initial_tz={get_tz(0)} />
+                    <Cell initial_tz={get_tz(1)} />
+                    <Cell initial_tz={get_tz(2)} />
+                    <Cell initial_tz={get_tz(3)} />
+                </div>
+            </Show>
         </main>
     }
 }
