@@ -1,5 +1,6 @@
 mod app;
 mod dropdown;
+mod time_cell;
 
 use app::*;
 use leptos::*;
