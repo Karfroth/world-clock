@@ -3,15 +3,42 @@ use std::borrow::Borrow;
 
 use leptos::*;
 
+use wasm_bindgen::prelude::*;
+use serde::{Deserialize, Serialize};
+use serde_wasm_bindgen::to_value;
+
 use chrono::Utc;
 use chrono_tz::{TZ_VARIANTS, Tz};
 
 use crate::dropdown::*;
 
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "tauri"])]
+    async fn invoke(cmd: &str, args: JsValue) -> JsValue;
+}
+
+#[derive(Serialize, Deserialize)]
+struct GetTZArgs {
+    id: String,
+}
+
+async fn get_tz(id: String) -> Option<String> {
+    let params = GetTZArgs { id };
+    let new_msg = invoke("get_tz", to_value(&params).unwrap()).await;
+    let returned = serde_wasm_bindgen::from_value::<Vec<String>>(new_msg).ok();
+    let tz_opt = returned.and_then(|x| x.get(0).map(|y| y.to_owned()));
+    if tz_opt.is_some() {
+        tz_opt
+    } else {
+        iana_time_zone::get_timezone().ok()
+    }
+}
+
 #[component]
-pub fn TimeComp(selected_tz: ReadSignal<Option<String>>) -> impl IntoView {
+fn TimeComp(selected_tz: Option<String>) -> impl IntoView {
     let get_time = move || {
-        selected_tz.get().and_then(|x| x.parse::<Tz>().ok()).map(|tz|
+        selected_tz.clone().and_then(|x| x.parse::<Tz>().ok()).map(|tz|
             Utc::now().with_timezone(tz.borrow()).to_string()
         )
     };
@@ -67,20 +94,33 @@ fn InnerCell(initial_tz: Option<String>) -> impl IntoView {
         set_tz.set(tz);
     };
 
-    view! {
-        <div class="time-cell">
-            <div class="time-span">
-                <span>{move || selected_tz.get().unwrap_or("a".to_string())}</span>
-                <TimeComp selected_tz />
+    move || {
+        view! {
+            <div class="time-cell">
+                <div class="time-span">
+                    <span>{selected_tz.get().unwrap_or("a".to_string())}</span>
+                    <TimeComp selected_tz={selected_tz.get()} />
+                </div>
+                <CellEdit on_select=on_tz_select selected_tz />
             </div>
-            <CellEdit on_select=on_tz_select selected_tz />
-        </div>
+        }
     }
 }
 
 #[component]
-pub fn Cell(initial_tz: String) -> impl IntoView {
+pub fn Cell(id: String) -> impl IntoView {
+    let (initial_tz, set_initial_tz) = create_signal(None::<String>);
+
+    spawn_local(async move {
+        // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
+        let tz = get_tz(id).await;
+
+        set_initial_tz.set(tz);
+    });
+
     view! {
-        <InnerCell initial_tz={Some(initial_tz)} />
+        <Show when=move || initial_tz.get().is_some()>
+            <InnerCell initial_tz={initial_tz.get()} />
+        </Show>
     }
 }

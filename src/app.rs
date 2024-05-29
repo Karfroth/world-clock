@@ -9,35 +9,39 @@ extern "C" {
     async fn invoke(cmd: &str, args: JsValue) -> JsValue;
 }
 
-#[derive(Serialize, Deserialize)]
-struct GetTZArgs {
-    idx: i32,
+async fn get_cell_ids() -> Option<Vec<String>> {
+    let new_msg = invoke("get_cell_ids", JsValue::undefined()).await;
+    let returned = serde_wasm_bindgen::from_value::<Vec<String>>(new_msg).ok();
+    returned
 }
 
 #[component]
 pub fn App() -> impl IntoView {
-    let (initial_tzs, set_initial_tzs) = create_signal(None::<Vec<String>>);
+    let (cell_ids, set_cell_ids) = create_signal(None::<Vec<String>>);
 
     spawn_local(async move {
         // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-        let new_msg = invoke("get_tzs", JsValue::undefined()).await;
-        let returned = serde_wasm_bindgen::from_value::<Vec<String>>(new_msg).ok();
+        let cell_ids_vec = get_cell_ids().await;
 
-        set_initial_tzs.set(returned);
+        let asdf = cell_ids_vec.clone().unwrap_or(vec!{});
+
+        logging::log!{"Recieved ids: {:?}", asdf};
+
+        set_cell_ids.set(cell_ids_vec);
     });
 
     let get_tz = move |idx: usize| {
-        initial_tzs.get().and_then(|x| x.get(idx).map(|x| x.clone()))
+        cell_ids.get().and_then(|x| x.get(idx).map(|x| x.clone()))
     };
 
     view! {
         <main class="container">
-            <Show when = move || initial_tzs.get().is_some()>
+            <Show when = move || cell_ids.get().is_some()>
                 <div class="wrapper">
-                    <Cell initial_tz={get_tz(0).unwrap_or(iana_time_zone::get_timezone().unwrap())} />
-                    <Cell initial_tz={get_tz(1).unwrap_or(iana_time_zone::get_timezone().unwrap())} />
-                    <Cell initial_tz={get_tz(2).unwrap_or(iana_time_zone::get_timezone().unwrap())} />
-                    <Cell initial_tz={get_tz(3).unwrap_or(iana_time_zone::get_timezone().unwrap())} />
+                    <Cell id={get_tz(0).unwrap()} />
+                    <Cell id={get_tz(1).unwrap()} />
+                    <Cell id={get_tz(2).unwrap()} />
+                    <Cell id={get_tz(3).unwrap()} />
                 </div>
             </Show>
         </main>
