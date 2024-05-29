@@ -56,33 +56,43 @@ fn TimeComp(selected_tz: Option<String>) -> impl IntoView {
 }
 
 #[component]
-fn CellEdit<F: Fn(Option<String>) + 'static>(
-    on_select: F,
-    selected_tz: ReadSignal<Option<String>>) -> impl IntoView {
-    let tzs = TZ_VARIANTS
-        .iter()
-        .map(|x| format!("{}", x))
-        .collect::<Vec<String>>();
-
+fn CellEdit(
+    #[prop(into)] on_select: Callback<Option<String>>,
+    selected_tz: Option<String>) -> impl IntoView {
     let (editable, set_editable) = create_signal(false);
+    let (cur_selection, set_selection) = create_signal(selected_tz);
 
-    let toggle_editable = move |_ev| {
-        set_editable.set(!editable.get());
-    };
+    move || {
+        let toggle_editable = move |_ev| {
+            let shouldBeEditable = editable.get();
+            set_editable.set(!shouldBeEditable);
+            if shouldBeEditable {
+                on_select.call(cur_selection.get());
+            }
+        };
+    
+        let button_text = move || {
+            if editable.get() {
+                "Confirm"
+            } else {
+                "Edit"
+            }
+        };
+    
+        let on_click = move |new_selection| {
+            set_selection.set(new_selection);
+        };
 
-    let button_text = move || {
-        if editable.get() {
-            "Confirm"
-        } else {
-            "Edit"
+        let tzs = TZ_VARIANTS
+            .iter()
+            .map(|x| format!("{}", x))
+            .collect::<Vec<String>>();
+        view! {
+            <div>
+                <button on:click=toggle_editable>{button_text}</button>
+                <FilterableDropdown editable={editable.get()} items={tzs} on_click=on_click selected_item={cur_selection.get()} />
+            </div>
         }
-    };
-
-    view! {
-        <div>
-            <button on:click=toggle_editable>{button_text}</button>
-            <FilterableDropdown editable items=tzs on_click=on_select selected_item=selected_tz/>
-        </div>
     }
 }
 
@@ -101,7 +111,7 @@ fn InnerCell(initial_tz: Option<String>) -> impl IntoView {
                     <span>{selected_tz.get().unwrap_or("a".to_string())}</span>
                     <TimeComp selected_tz={selected_tz.get()} />
                 </div>
-                <CellEdit on_select=on_tz_select selected_tz />
+                <CellEdit on_select=on_tz_select selected_tz={selected_tz.get()} />
             </div>
         }
     }
