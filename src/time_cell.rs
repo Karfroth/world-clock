@@ -43,9 +43,12 @@ fn TimeComp(selected_tz: Option<String>) -> impl IntoView {
         )
     };
     let (time, set_time) = create_signal(get_time().unwrap_or("".to_string()));
-    set_interval(move || {
-        set_time.set(get_time().unwrap_or("".to_string()))
+    let interval = set_interval_with_handle(move || {
+        set_time.try_set(get_time().unwrap_or("".to_string()));
     }, time::Duration::new(1, 0));
+
+    on_cleanup(|| { let _ = interval.map(|x| x.clear()); });
+
     move || {
         view! {
             <div>
