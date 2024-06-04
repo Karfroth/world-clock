@@ -23,9 +23,33 @@ struct GetTZArgs {
     id: String,
 }
 
+#[derive(Serialize, Deserialize)]
+struct SetTZArgs {
+    id: String,
+    tz: String,
+}
+
+
 async fn get_tz(id: String) -> Option<String> {
-    let params = GetTZArgs { id };
+    let params = GetTZArgs { id: id.clone() };
     let new_msg = invoke("get_tz", to_value(&params).unwrap()).await;
+    let returned = serde_wasm_bindgen::from_value::<Vec<String>>(new_msg).ok();
+    logging::warn!("returned for id {} is some: {}", id, returned.clone().is_some());
+    logging::warn!("returned length for id {} is some: {}", id, returned.clone().map(|x| x.len()).unwrap_or(0));
+    logging::warn!("returned length for id {} is some: {}", id, returned.clone().and_then(|x| x.get(0).map(|x| x.to_owned())).unwrap_or("asdf".to_string()));
+    let tz_opt = returned.and_then(|x| x.get(0).map(|y| y.to_owned()));
+    if tz_opt.is_some() {
+        tz_opt
+    } else {
+        iana_time_zone::get_timezone().ok()
+    }
+}
+
+async fn set_tz(id: String, tz_opt: Option<String>) -> Option<String> {
+    let tz = tz_opt.unwrap();
+    let params = SetTZArgs { id, tz };
+
+    let new_msg = invoke("set_tz", to_value(&params).unwrap()).await;
     let returned = serde_wasm_bindgen::from_value::<Vec<String>>(new_msg).ok();
     let tz_opt = returned.and_then(|x| x.get(0).map(|y| y.to_owned()));
     if tz_opt.is_some() {
@@ -100,12 +124,40 @@ fn CellEdit(
 }
 
 #[component]
-fn InnerCell(initial_tz: Option<String>) -> impl IntoView {
-    let tz_str = if initial_tz.is_some() { initial_tz } else { iana_time_zone::get_timezone().ok() };
-    let (selected_tz, set_tz) = create_signal(tz_str);
+fn InnerCell(id: String) -> impl IntoView {
+    let (initial_tz, set_initial_tz) = create_signal(None::<String>);
+    let (selected_tz, set_selected_tz) = create_signal(iana_time_zone::get_timezone().ok());
     let on_tz_select = move |tz| {
-        set_tz.set(tz);
+        set_selected_tz.set(tz);
     };
+
+    let cloned_id = id.clone();
+    
+    spawn_local(async move {
+        // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
+        let tz = get_tz(cloned_id.clone()).await;
+
+        set_initial_tz.set(tz.clone());
+        set_selected_tz.set(tz);
+    });
+
+    let _ = create_local_resource(
+        move || selected_tz.get(), 
+        move |new_tz| {
+            let iid = id.clone();
+            async move {
+                let should_update = new_tz
+                    .clone()
+                    .and_then(|x| initial_tz.get().map(|y| x != y))
+                    .unwrap_or(false);
+                logging::warn!("should_update: {}", should_update);
+                if initial_tz.get().is_some() && should_update {
+                    let updated_tz = set_tz(iid, new_tz).await;
+                    set_selected_tz.set(updated_tz);
+                }
+            }
+        }
+    );
 
     move || {
         view! {
@@ -114,7 +166,7 @@ fn InnerCell(initial_tz: Option<String>) -> impl IntoView {
                     <span>{selected_tz.get().unwrap_or("a".to_string())}</span>
                     <TimeComp selected_tz={selected_tz.get()} />
                 </div>
-                <CellEdit on_select=on_tz_select selected_tz={selected_tz.get()} />
+                <CellEdit on_select={on_tz_select} selected_tz={selected_tz.get()} />
             </div>
         }
     }
@@ -122,18 +174,7 @@ fn InnerCell(initial_tz: Option<String>) -> impl IntoView {
 
 #[component]
 pub fn Cell(id: String) -> impl IntoView {
-    let (initial_tz, set_initial_tz) = create_signal(None::<String>);
-
-    spawn_local(async move {
-        // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-        let tz = get_tz(id).await;
-
-        set_initial_tz.set(tz);
-    });
-
     view! {
-        <Show when=move || initial_tz.get().is_some()>
-            <InnerCell initial_tz={initial_tz.get()} />
-        </Show>
+        <InnerCell id />
     }
 }
