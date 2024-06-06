@@ -5,6 +5,8 @@ use directories::ProjectDirs;
 use jammdb::DB;
 use uuid::Uuid;
 
+use tauri::{CustomMenuItem, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu, SystemTrayMenuItem};
+
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
 fn get_tz(id: String) -> Vec<String> {
@@ -75,8 +77,36 @@ fn get_db() -> Result<DB, jammdb::Error> {
 }
 
 fn main() {
+    let tray_menu = SystemTrayMenu::new();
+    let system_tray = SystemTray::new()
+        .with_menu(tray_menu);
     tauri::Builder::default()
+        .system_tray(system_tray)
+        .on_system_tray_event(|app, event| match event {
+            SystemTrayEvent::LeftClick {
+              position: _,
+              size: _,
+              ..
+            } => {
+              println!("system tray received a left click");
+              if let Some(main_window) = app.get_window("main") {
+                main_window.is_visible().and_then(|visible| {
+                    if !visible { main_window.show().and_then(|_| main_window.set_focus()) } else { main_window.hide() }
+                }).ok();
+              }
+            }
+            _ => {}
+        })
         .invoke_handler(tauri::generate_handler![get_cell_ids, get_tz, set_tz])
+        .on_window_event(|event| match event.event() {
+            tauri::WindowEvent::CloseRequested { api, .. } => {
+              event.window().hide().unwrap();
+            //   println!("{}", event.window().label());
+              api.prevent_close();
+            }
+            _ => {}
+          })
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .expect("error while running tauri application")
+        
 }
