@@ -19,6 +19,9 @@
       },
       "path": {
         "all": true
+      },
+      "globalShortcut": {
+        "all": true
       }
     },
     "windows": [
@@ -26,7 +29,9 @@
         "title": "my-awesome-world-timer",
         "width": 800,
         "height": 600,
-        "visible": false
+        "visible": false,
+        "decorations": false,
+        "transparent": true
       }
     ],
     "security": {

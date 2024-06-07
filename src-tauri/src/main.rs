@@ -5,13 +5,25 @@ mod commands;
 mod db;
 
 use crate::commands::{get_cell_ids, get_tz, set_tz};
-use tauri::{CustomMenuItem, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu, SystemTrayMenuItem};
+use tauri::{CustomMenuItem, GlobalShortcutManager, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu, SystemTrayMenuItem};
 
 fn main() {
     let tray_menu = SystemTrayMenu::new();
     let system_tray = SystemTray::new()
         .with_menu(tray_menu);
     tauri::Builder::default()
+        .setup(|app|{
+          let mut shortcut_manager = app.global_shortcut_manager();
+          let window = app.get_window("main");
+          shortcut_manager.register("CmdOrCtrl+Shift+0", move || {
+            if let Some(main_window) = &window {
+              main_window.is_visible().and_then(|visible| {
+                  if !visible { main_window.show().and_then(|_| main_window.set_focus()) } else { main_window.hide() }
+              }).ok();
+            };
+          }).ok();
+          Ok(())
+        })
         .system_tray(system_tray)
         .on_system_tray_event(|app, event| match event {
             SystemTrayEvent::LeftClick {
