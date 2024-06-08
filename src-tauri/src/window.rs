@@ -1,0 +1,19 @@
+use tauri::{SystemTrayHandle, Window};
+use crate::tray::{MenuTransition, update_show_hide_menu};
+
+pub fn toggle_window_visibility(main_window: &Window, tray_handler: &SystemTrayHandle) -> Result<(), tauri::Error> {
+    // main_window.is_visible().and_then(|visible| {
+    //     let transition = if visible { MenuTransition::ToShow } else { MenuTransition::ToHide };
+    //     update_show_hide_menu(&tray_handler, transition);
+    //     if !visible { main_window.show().and_then(|_| main_window.set_focus()) } else { main_window.hide() }
+    // })
+    let visible = main_window.is_visible()?;
+    let transition = if visible { MenuTransition::ToShow } else { MenuTransition::ToHide };
+    update_show_hide_menu(&tray_handler, transition);
+    if !visible {
+        main_window.show()?;
+        main_window.set_focus()
+    } else {
+        main_window.hide()
+    }
+}

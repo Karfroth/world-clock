@@ -3,18 +3,37 @@
 
 mod commands;
 mod db;
+mod tray;
+mod window;
 
 use crate::commands::{get_cell_ids, get_tz, set_tz};
-use tauri::{CustomMenuItem, GlobalShortcutManager, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu, SystemTrayMenuItem};
+use crate::tray::get_show_menu;
+use tauri::{AppHandle, GlobalShortcutManager, Manager, SystemTray, SystemTrayEvent};
+use window::toggle_window_visibility;
 use window_vibrancy::{apply_blur, apply_vibrancy, NSVisualEffectMaterial};
 
+pub fn handle_tray_event(app: &AppHandle, event: SystemTrayEvent) {
+  match event {
+      SystemTrayEvent::MenuItemClick { id, .. } if id == "quit" => app.exit(0),
+      SystemTrayEvent::MenuItemClick { id, .. } if id == "show_or_hide" => {
+          let window = app.get_window("main");
+          let tray_handler = app.tray_handle();
+          if let Some(main_window) = window {
+              toggle_window_visibility(&main_window, &tray_handler).unwrap();
+          }
+      },
+      _ => {}
+  }
+}
+
 fn main() {
-    let tray_menu = SystemTrayMenu::new();
+    let show_menu = get_show_menu();
     let system_tray = SystemTray::new()
-        .with_menu(tray_menu);
+        .with_menu(show_menu);
     tauri::Builder::default()
         .setup(|app|{
           let mut shortcut_manager = app.global_shortcut_manager();
+          let tray_handler = app.tray_handle();
           let window = app.get_window("main");
           if let Some(main_window) = window {
             #[cfg(target_os = "macos")]
@@ -24,39 +43,20 @@ fn main() {
             apply_blur(&main_window, Some((18, 18, 18, 125))).expect("Unsupported platform! 'apply_blur' is only supported on Windows");
 
             shortcut_manager.register("CmdOrCtrl+Shift+0", move || {
-                main_window.is_visible().and_then(|visible| {
-                  if !visible { main_window.show().and_then(|_| main_window.set_focus()) } else { main_window.hide() }
-              }).ok();
+              //   main_window.is_visible().and_then(|visible| {
+              //     let transition = if visible { MenuTransition::ToShow } else { MenuTransition::ToHide };
+              //     update_show_hide_menu(&tray_handler, transition);
+              //     if !visible { main_window.show().and_then(|_| main_window.set_focus()) } else { main_window.hide() }
+              // }).ok();
+              toggle_window_visibility(&main_window, &tray_handler).unwrap();
             }).ok();
           }
           // }).ok();
           Ok(())
         })
         .system_tray(system_tray)
-        .on_system_tray_event(|app, event| match event {
-            SystemTrayEvent::LeftClick {
-              position: _,
-              size: _,
-              ..
-            } => {
-              println!("system tray received a left click");
-              if let Some(main_window) = app.get_window("main") {
-                main_window.is_visible().and_then(|visible| {
-                    if !visible { main_window.show().and_then(|_| main_window.set_focus()) } else { main_window.hide() }
-                }).ok();
-              }
-            }
-            _ => {}
-        })
+        .on_system_tray_event(handle_tray_event)
         .invoke_handler(tauri::generate_handler![get_cell_ids, get_tz, set_tz])
-        .on_window_event(|event| match event.event() {
-            tauri::WindowEvent::CloseRequested { api, .. } => {
-              event.window().hide().unwrap();
-            //   println!("{}", event.window().label());
-              api.prevent_close();
-            }
-            _ => {}
-          })
         .run(tauri::generate_context!())
         .expect("error while running tauri application")
         
