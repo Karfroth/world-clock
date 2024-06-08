@@ -18,7 +18,7 @@ fn main() {
           let window = app.get_window("main");
           if let Some(main_window) = window {
             #[cfg(target_os = "macos")]
-            apply_vibrancy(&main_window, NSVisualEffectMaterial::HudWindow, None, None).expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
+            apply_vibrancy(&main_window, NSVisualEffectMaterial::HudWindow, None, Some(16.0)).expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
 
             #[cfg(target_os = "windows")]
             apply_blur(&main_window, Some((18, 18, 18, 125))).expect("Unsupported platform! 'apply_blur' is only supported on Windows");

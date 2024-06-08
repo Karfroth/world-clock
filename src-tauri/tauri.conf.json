@@ -32,7 +32,9 @@
         "height": 400,
         "visible": false,
         "decorations": false,
-        "transparent": true
+        "transparent": true,
+        "resizable": false,
+        "closable": false
       }
     ],
     "security": {

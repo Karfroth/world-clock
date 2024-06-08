@@ -118,7 +118,8 @@ button {
   gap: 10px;
   grid-template-rows: repeat(2, 1fr);
   width: 100wh;
-  height: 100vh;
+  height: 85vh;
+  overflow: hidden;
 }
 
 .time-cell {
