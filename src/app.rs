@@ -34,7 +34,7 @@ pub fn App() -> impl IntoView {
     };
 
     view! {
-        <main class="container">
+        <main class="container title-panel" data-tauri-drag-region>
             <Show when = move || cell_ids.get().is_some()>
                 <div class="wrapper">
                     <Cell id={get_tz(0).unwrap()} />

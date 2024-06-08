@@ -75,8 +75,8 @@ fn TimeComp(selected_tz: Option<String>) -> impl IntoView {
 
     move || {
         view! {
-            <div>
-                <span>{time.get()}</span>
+            <div data-tauri-drag-region>
+                <span data-tauri-drag-region>{time.get()}</span>
             </div>
         }
     }
@@ -115,7 +115,7 @@ fn CellEdit(
             .map(|x| format!("{}", x))
             .collect::<Vec<String>>();
         view! {
-            <div>
+            <div data-tauri-drag-region>
                 <button on:click=toggle_editable>{button_text}</button>
                 <FilterableDropdown editable={editable.get()} items={tzs} on_click=on_click selected_item={cur_selection.get()} />
             </div>
@@ -161,9 +161,9 @@ fn InnerCell(id: String) -> impl IntoView {
 
     move || {
         view! {
-            <div class="time-cell">
+            <div class="time-cell" data-tauri-drag-region>
                 <div class="time-span">
-                    <span>{selected_tz.get().unwrap_or("a".to_string())}</span>
+                    <span data-tauri-drag-region>{selected_tz.get().unwrap_or("a".to_string())}</span>
                     <TimeComp selected_tz={selected_tz.get()} />
                 </div>
                 <CellEdit on_select={on_tz_select} selected_tz={selected_tz.get()} />
