@@ -43,11 +43,6 @@ fn main() {
             apply_blur(&main_window, Some((18, 18, 18, 125))).expect("Unsupported platform! 'apply_blur' is only supported on Windows");
 
             shortcut_manager.register("CmdOrCtrl+Shift+0", move || {
-              //   main_window.is_visible().and_then(|visible| {
-              //     let transition = if visible { MenuTransition::ToShow } else { MenuTransition::ToHide };
-              //     update_show_hide_menu(&tray_handler, transition);
-              //     if !visible { main_window.show().and_then(|_| main_window.set_focus()) } else { main_window.hide() }
-              // }).ok();
               toggle_window_visibility(&main_window, &tray_handler).unwrap();
             }).ok();
           }
